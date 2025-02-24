@@ -1,0 +1,11 @@
+{
+    "_id": "python",
+    "language": "python",
+    "test_command": "pytest /tmp/script_test.py",
+    "test_headers": [],
+    "header_mappings": {
+        "math": "import math"
+    },
+    "test_function": "def test_{function_name}():",
+    "test_assertions": "\n  assert {function_name}({input}) == {expected_output}"
+}

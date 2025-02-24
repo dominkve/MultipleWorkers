@@ -1,0 +1,26 @@
+{
+  "_id": "problem_1",
+  "title": "Sum of Two Numbers",
+  "description": "Write a function that returns the sum of two numbers.",
+  "function_headers": [],
+  "function_name": "add",
+  "test_cases": [
+    {
+      "input": [
+        1,
+        2
+      ],
+      "expected_output": 3
+    },
+    {
+      "input": [
+        5,
+        7
+      ],
+      "expected_output": 12
+    }
+  ],
+  "allowed_languages": [
+    "python"
+  ]
+}
