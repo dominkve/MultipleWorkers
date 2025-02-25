@@ -16,55 +16,32 @@ r = redis.Redis(host='172.30.221.102', port=6379, db=0)
 job_data = r.brpop("test_queue")[1]
 job_data = json.loads(job_data)
 
-problem_data = problems_collection.find_one({"_id": job_data["problem_id"]})
+# ----------------------------------------------
+# GENERATION
+# ----------------------------------------------
+
+# problem_data = problems_collection.find_one({"_id": job_data["problem_id"]})
 test_data = tests_collection.find_one({"_id": job_data["language"]})
+problem_data = problems_collection.find_one({"_id": job_data["problem_id"]})
 
-def headers(problem_data, test_data):
-    headers = set(test_data["test_headers"])
-    for tag in problem_data["function_headers"]:
-        if tag in test_data["header_mappings"]:
-            headers.add(test_data["header_mappings"][tag])
+framework = "pytest"
+test_data = test_data["frameworks"][framework]
 
-    header_string = "\n".join(headers)
-
-    print(header_string)
-    return header_string
-
-def test_harness(problem_data, test_data):
-    test_assertions = ""
-    function_name = problem_data["function_name"]
-    test_function = test_data["test_function"]
-    test_function = test_function.replace("{function_name}", function_name)
-    test_cases = problem_data["test_cases"]
-    test_assertion = test_data["test_assertions"]
-    for test_case in test_cases:
-        test_assertion = test_data["test_assertions"]
-        input = test_case['input']
-        expected_output = test_case['expected_output']
-
-        test_assertion = test_assertion.replace("{input}", input)
-        test_assertion = test_assertion.replace("{expected_output}", str(expected_output))
-
-        test_assertion = test_assertion.replace("{function_name}", function_name)
-        print(test_assertion)
-        test_assertions += test_assertion
-    
-    print(test_assertions)
-    test_harness = test_function + test_assertions
-    print(test_harness)
-    return test_harness
-
-    
+headers = test_data["headers"]
+function = test_data["function"].format(FUNCTION_NAME=problem_data["FUNCTION_NAME"])
+assertions = [
+    test_data["assertion"].format(
+            FUNCTION_NAME=problem_data["FUNCTION_NAME"],
+            ASSERTION_PREFIX=test_case["ASSERTION_PREFIX"],
+            INPUT=test_case["INPUT"],
+            ASSERTION_OPERATOR=test_data["operators"][test_case["ASSERTION_OPERATOR"]],
+            EXPECTED_OUTPUT=test_case["EXPECTED_OUTPUT"]
+        )
+        for test_case in problem_data["test_cases"]
+]
 
 
-header = headers(problem_data, test_data)
-harness = test_harness(problem_data, test_data)
-
-test = header + '\n' + job_data["code"] + '\n\n' + harness
-print()
-print(test)
-
-job_data["code"] = test
-print()
-print(job_data["code"])
+test_code = headers + job_data["code"] + function + "".join(assertions)
+print(test_code)
+job_data["code"] = test_code
 r.lpush("execution_queue", json.dumps(job_data))

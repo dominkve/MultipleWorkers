@@ -15,10 +15,16 @@ import docker
 import tempfile
 import os
 import tarfile
-from language_configs import LANGUAGE_CONFIGS
+from pymongo import MongoClient
+from artefacts.language_configs import LANGUAGE_CONFIGS
 
-client = docker.from_env()
-container = client.containers.run(
+mongo_client = MongoClient("mongodb://172.30.221.102:27017/")
+db = mongo_client["test_db"]
+
+executions_collection = db["executions"]
+
+docker_client = docker.from_env()
+container = docker_client.containers.run(
     "final",
     command="sh",
     detach=True,
@@ -70,8 +76,9 @@ def pretty_job_data(job_data):
 # [*] FUNCTION
 # Runs code inside a container and returns the result
 def run_code(code, language, container, mode):
-    lang_cfg = LANGUAGE_CONFIGS[language]
-    suffix = lang_cfg["suffix"]
+    execution_data = executions_collection.find_one({"_id": language})
+
+    suffix = execution_data["suffix"]
     if (mode == "test"):
         arcname = f"script_test.{suffix}"
     else:
@@ -95,12 +102,12 @@ def run_code(code, language, container, mode):
             container.put_archive("/tmp", f.read())  # `/tmp/script.py` inside the container
 
 
-        if lang_cfg["compile"]:
-            compile_result = container.exec_run(lang_cfg["compile"])
+        if execution_data["compile"]:
+            compile_result = container.exec_run(execution_data["compile"])
             if compile_result.exit_code != 0:
                 return {"result": f"Compilation failed.\n{compile_result.output.decode()}", "status": "failed"}
         
-        exec_log = container.exec_run(lang_cfg[f"{mode}"])
+        exec_log = container.exec_run(execution_data[f"{mode}"])
         result = exec_log.output.decode()
         if exec_log.exit_code in [124, 137, 143]:  # 124 (timeout), 137 (SIGKILL), 143 (SIGTERM)
             result = "Error: Execution timed out after 5 seconds."
@@ -108,7 +115,7 @@ def run_code(code, language, container, mode):
 
              # 🔥 Kill ALL stuck Python processes inside the container
             print("Killing stuck processes...")
-            container.exec_run(lang_cfg["kill"])  # Force kill any lingering Python scripts
+            container.exec_run(execution_data["kill"])  # Force kill any lingering Python scripts
 
 
         elif exec_log.exit_code == 0:
