@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <form id="codeForm">
+            <textarea id="codeInput" placeholder="Write your code here..."></textarea>
+            <select id="mode">
+                <option value="run">RUN</option>
+                <option value="test">TEST</option>
+            </select>
+            <select id="language">
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+                <option value="C">C</option>
+                <option value="ruby">Ruby</option>
+            </select>
+            <input type="submit" value="Submit"></input>
+            <pre id="output">Waiting for execution...</pre>
+        </form>
+        <form id="problemForm">
+            <select id="problem_id">
+                <option value="problem_1">Addition</option>
+                <option value="problem_2">Multiplication</option>
+                <option value="problem_3">Longer String</option>
+                <option value="problem_4">Find max</option>
+                <option value="problem_5">Reverse a List</option>
+                <option value="problem_6">Max in a Nested List</option>
+                <option value="problem_7">Max value in Dictionary</option>
+            </select>
+            <pre id="problem_data"></pre>
+        </form>
+
+        <script>
+            async function getProblem(problem_id) {
+                try {
+                    console.log("Fetching problem: " + problem_id)
+                    const response = await fetch("http://127.0.0.1:5000/problem", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }, // FIXED HEADER
+                        body: JSON.stringify({ problem_id }) // FIXED BODY
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch problem");
+                    }   
+
+                    const data = await response.json();
+                    console.log("Problem data fetched:", data);
+
+                    return data;
+                } catch (error) {
+                    document.getElementById("problem_data").textContent = "Error fetching problem: " + error.message;
+                }
+            }
+
+            document.getElementById("problem_id").addEventListener("change", async function() {
+                let problem_id = this.value;
+                let data = await getProblem(problem_id); // FIXED: Await the result
+                document.getElementById("problem_data").textContent = "Problem Data: " + JSON.stringify(data, null, 2);
+            });
+        </script>
+
+        <script src="script.js"></script>
+    </body>
+</html>
